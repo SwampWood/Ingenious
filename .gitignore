@@ -1,0 +1,9 @@
+frontend/node_modules/
+.idea/
+venv/
+.env
+*.sqlite3
+__pycache__/
+*.pyc
+*.log
+media/
