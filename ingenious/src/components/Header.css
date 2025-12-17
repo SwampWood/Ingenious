@@ -1,44 +1,44 @@
 .header {
-    height: var(--header-height);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 2rem;
-    background-size: cover;
-    background-position: center;
-    color: var(--text-active);
+  height: var(--header-height);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  background-size: cover;
+  background-position: center;
+  color: var(--text-active);
 }
 
 .header-right {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
 
 .logo {
-    font-size: var(--h1);
-    font-weight: 600;
-    margin: 0;
+  font-size: var(--h1);
+  font-weight: 600;
+  margin: 0;
 }
 
 .username {
-    font-size: var(--h2);
-    font-weight: 600;
-    cursor: pointer;
+  font-size: var(--h2);
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .logout-btn {
-    padding: 0.5rem 1.5rem;
-    background: var(--button-default);
-    color: var(--text-active);
-    border: none;
-    border-radius: 100px;
-    cursor: pointer;
-    font-size: var(--default);
-    font-weight: 500;
-    transition: background 0.3s;
+  padding: 0.5rem 1.5rem;
+  background: var(--button-default);
+  color: var(--text-active);
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  font-size: var(--default);
+  font-weight: 500;
+  transition: background 0.3s;
 }
 
 .logout-btn:hover {
-    background: var(--button-hover);
+  background: var(--button-hover);
 }
