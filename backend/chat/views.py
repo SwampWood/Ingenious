@@ -8,11 +8,49 @@ from .serializers import ChatRoomSerializer, MessageSerializer
 
 class ChatRoomViewSet(viewsets.ModelViewSet):
     serializer_class = ChatRoomSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = []
     
     def get_queryset(self):
-        user = self.request.user
-        return ChatRoom.objects.all() # ОБЯЗАТЕЛЬНО ПОМЕНЯТЬ
+        project_id = self.request.query_params.get('project')
+        
+        if project_id:
+            return ChatRoom.objects.filter(project_id=project_id)
+        return ChatRoom.objects.all()
+    
+    def create(self, request, *args, **kwargs):
+        project_id = request.data.get('project')
+        
+        if project_id:
+            existing = ChatRoom.objects.filter(
+                project_id=project_id,
+                room_type='project'
+            ).first()
+            
+            if existing:
+                serializer = self.get_serializer(existing)
+                return Response(serializer.data, status=200)
+
+            from projects.models import Project
+            try:
+                project = Project.objects.get(id=project_id)
+
+                room = ChatRoom.objects.create(
+                    room_type='project',
+                    project=project,
+                    name=f'Чат проекта {project.title}'
+                )
+
+                room.participants.add(project.creator)
+                for membership in project.projectmembership_set.all():
+                    room.participants.add(membership.user)
+                
+                serializer = self.get_serializer(room)
+                return Response(serializer.data, status=201)
+                
+            except Project.DoesNotExist:
+                pass
+        
+        return super().create(request, *args, **kwargs)
     
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):

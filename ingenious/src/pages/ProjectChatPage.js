@@ -21,9 +21,7 @@ const ProjectChatPage = ({ user, onLogout }) => {
         const chatResponse = await api.get(`chat/rooms/?project=${id}`);
         if (chatResponse.data.length > 0) {
           const roomId = chatResponse.data[0].id;
-          const messagesResponse = await api.get(
-            `chat/rooms/${roomId}/messages/`,
-          );
+          const messagesResponse = await api.get(`chat/messages/?room=${roomId}`);
           setMessages(messagesResponse.data);
         }
       } catch (error) {
@@ -50,7 +48,14 @@ const ProjectChatPage = ({ user, onLogout }) => {
   if (!newMessage.trim()) return;
 
   try {
-    const chatResponse = await api.get(`chat/rooms/?project=${id}`);
+    let chatResponse;
+    try {
+      chatResponse = await api.get(`chat/rooms/?project=${id}`);
+    } catch (error) {
+      console.log('Ошибка получения комнат, создаём новую');
+      chatResponse = { data: [] };
+    }
+    
     let roomId;
     
     if (chatResponse.data.length > 0) {
@@ -58,27 +63,30 @@ const ProjectChatPage = ({ user, onLogout }) => {
       console.log('Используем существующую комнату:', roomId);
     } else {
       console.log('Создаём новую комнату для проекта:', id);
+
+      const projResponse = await api.get(`projects/projects/${id}/`);
+      const participants = projResponse.data.participants.map(p => p.id);
+      
       const roomResponse = await api.post('chat/rooms/', {
         room_type: 'project',
         project: id,
-        participants: project.members.map(m => m.user.id)
+        participants: participants,
+        name: `Чат проекта ${projResponse.data.title}`
       });
+      
       roomId = roomResponse.data.id;
       console.log('Создана комната ID:', roomId);
     }
 
-    console.log('Отправляем сообщение в комнату:', roomId);
     await api.post('chat/messages/', {
       room: roomId,
       content: newMessage.trim()
     });
-    
-    console.log('Сообщение отправлено');
-    setNewMessage('');
 
     const messagesResponse = await api.get(`chat/messages/?room=${roomId}`);
     setMessages(messagesResponse.data);
-    
+    setNewMessage('');
+
   } catch (error) {
     console.error('Ошибка отправки:', error.response?.data || error);
     alert('Не удалось отправить сообщение');

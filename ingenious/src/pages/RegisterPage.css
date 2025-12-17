@@ -1,9 +1,9 @@
-.login-page {
+.register-page {
   display: flex;
   min-height: 100vh;
 }
 
-.login-sidebar {
+.register-sidebar {
   width: 25%;
   display: flex;
   background-size: cover;
@@ -32,7 +32,7 @@
   opacity: 0.9;
 }
 
-.login-main {
+.register-main {
   flex: 1;
   display: flex;
   align-items: center;
@@ -41,7 +41,7 @@
   background: var(--background);
 }
 
-.login-form {
+.register-form {
   width: 100%;
   max-width: 600px;
   background: var(--surface);
@@ -91,7 +91,7 @@
   text-align: center;
 }
 
-.login-btn {
+.register-btn {
   width: 100%;
   padding: 1rem;
   background: var(--primary);
@@ -105,7 +105,7 @@
   margin-bottom: 1.5rem;
 }
 
-.login-btn:hover {
+.register-btn:hover {
   background: var(--secondary);
 }
 

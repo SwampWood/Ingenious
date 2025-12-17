@@ -6,6 +6,7 @@ import CreateProjectPage from "./pages/CreateProjectPage";
 import EditProjectPage from "./pages/EditProjectPage";
 import ProjectChatPage from './pages/ProjectChatPage';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import api from "./api";
 import "./styles/global.css";
 import "./App.css";
@@ -18,7 +19,8 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token && location.pathname !== '/login') {
+    console.log(!token)
+    if (!token && location.pathname !== '/login' && location.pathname !== '/register') {
       navigate('/login');
       return;
     }
@@ -128,6 +130,8 @@ function App() {
       />
 
       <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/register" element={<RegisterPage />} />
     </Routes>
   );
 }

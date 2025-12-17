@@ -53,7 +53,7 @@ const LoginPage = () => {
           <h2 className="form-title">Вход в систему</h2>
           
           <div className="form-group">
-            <label className="form-label">Логин или email</label>
+            <label className="form-label">Логин</label>
             <input
               type="text"
               name="username"

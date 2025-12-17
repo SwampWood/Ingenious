@@ -6,6 +6,8 @@ const ProjectList = ({ projects }) => {
   const navigate = useNavigate();
   const [expandedProject, setExpandedProject] = useState(null);
   const [showOptions, setShowOptions] = useState(null);
+  const [showInfo, setShowInfo] = useState(null);
+  const [showMembers, setShowMembers] = useState(null);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -58,14 +60,32 @@ const ProjectList = ({ projects }) => {
 
                 {showOptions === project.id && (
                   <div className="more-options" ref={menuRef}>
-                    <button className="option-btn">Информация</button>
+                  <button className="option-btn" onClick={() => {
+                    setShowInfo(project.id);
+                    setShowOptions(null);
+                  }}>
+                    Информация
+                  </button>
                     <button
                       className="option-btn"
                       onClick={() => navigate(`/projects/${project.id}/edit`)}
                     >
                       Редактировать
                     </button>
-                    <button className="option-btn">Участники</button>
+                    <button className="option-btn" onClick={() => setShowMembers(project.id)}>
+                      Участники
+                    </button>
+
+                    {showMembers === project.id && (
+                      <div className="members-modal">
+                        <h3>Участники проекта</h3>
+                        {project.members?.map(member => (
+                          <div key={member.id}>
+                            {member.user.username} - {member.role}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <button 
                       className="option-btn" 
                       onClick={() => navigate(`/projects/${project.id}/chat`)}
@@ -105,6 +125,78 @@ const ProjectList = ({ projects }) => {
           )}
         </div>
       ))}
+
+      {showInfo && (
+        <div className="modal-overlay" onClick={() => setShowInfo(null)}>
+          <div className="modal-content info-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Информация о проекте</h3>
+              <button className="close-btn" onClick={() => setShowInfo(null)}>×</button>
+            </div>
+            
+            {projects.find(p => p.id === showInfo) && (
+              <div className="modal-body">
+                <h4>{projects.find(p => p.id === showInfo).title}</h4>
+                <p>{projects.find(p => p.id === showInfo).description}</p>
+                
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span className="label">Статус:</span>
+                    <span className="value">
+                      {projects.find(p => p.id === showInfo).is_completed ? 'Завершён' : 'Активный'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="label">Прогресс:</span>
+                    <span className="value">{projects.find(p => p.id === showInfo).progress}%</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="label">Дедлайн:</span>
+                    <span className="value">
+                      {projects.find(p => p.id === showInfo).deadline 
+                        ? new Date(projects.find(p => p.id === showInfo).deadline).toLocaleDateString('ru-RU')
+                        : 'Не установлен'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="label">Задач:</span>
+                    <span className="value">{projects.find(p => p.id === showInfo).tasks?.length || 0}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showMembers && (
+        <div className="modal-overlay" onClick={() => setShowMembers(null)}>
+          <div className="modal-content members-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Участники проекта</h3>
+              <button className="close-btn" onClick={() => setShowMembers(null)}>×</button>
+            </div>
+            
+            {projects.find(p => p.id === showMembers)?.members?.length > 0 ? (
+              <div className="members-list">
+                {projects.find(p => p.id === showMembers).members.map(member => (
+                  <div key={member.id} className="member-item">
+                    <div className="member-avatar">
+                      {member.user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="member-info">
+                      <div className="member-name">{member.user.username}</div>
+                      <div className="member-role">{member.role === 'creator' ? 'Создатель' : 'Участник'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-members">У проекта пока нет участников</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

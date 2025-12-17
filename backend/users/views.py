@@ -9,6 +9,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from .serializers import UserSerializer, RegisterSerializer
 
+User = get_user_model()
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def current_user(request):
@@ -21,12 +23,21 @@ def current_user(request):
         'bio': user.bio
     })
 
-User = get_user_model()
+@api_view(['POST'])
+def register_user(request):
+    serializer = RegisterSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        return Response({
+            'user': UserSerializer(user).data,
+            'message': 'User created successfully'
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get_permissions(self):
         if self.action == 'create':
