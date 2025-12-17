@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import ProjectList from "./components/ProjectList";
 import CreateProjectPage from "./pages/CreateProjectPage";
+import EditProjectPage from "./pages/EditProjectPage";
+import api from "./api";
 import "./styles/global.css";
 import "./App.css";
 
@@ -10,56 +12,56 @@ function App() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const mockUser = { username: "Иван Иванов" };
-    setUser(mockUser);
-
-    setProjects([
-      {
-        id: 1,
-        title: "Проект1",
-        progress: 33,
-        tasks: [
-          { id: 1, title: "Название задачи", status: "completed" },
-          { id: 2, title: "Название задачи", status: "in-progress" },
-          { id: 3, title: "Название задачи", status: "in-progress" },
-        ],
-      },
-      {
-        id: 2,
-        title: "Проект2",
-        progress: 50,
-        tasks: [
-          { id: 1, title: "Название задачи", status: "completed" },
-          { id: 2, title: "Название задачи", status: "in-progress" },
-        ],
-      },
-    ]);
-  }, []);
-
-  const handleCreateProject = (projectData) => {
-    console.log("Создаем проект:", projectData);
-
-    const newProject = {
-      id: projects.length + 1,
-      title: projectData.title,
-      progress: 0,
-      tasks: projectData.tasks
-        ? projectData.tasks.map((task, i) => ({
-            id: i + 1,
-            title: task,
-            status: "in-progress",
-          }))
-        : [],
+    const fetchProjects = async () => {
+      try {
+        const response = await api.get("projects/projects/");
+        setProjects(response.data);
+      } catch (error) {
+        console.error("Ошибка загрузки:", error);
+        setProjects([]);
+      }
     };
 
-    setProjects([...projects, newProject]);
+    setUser({ username: "Иван Иванов" });
+    fetchProjects();
+  }, [location.key]);
+
+  const handleCreateProject = async (projectData) => {
+    try {
+      const response = await api.post("projects/projects/", {
+        title: projectData.title,
+        description: projectData.description,
+        deadline: projectData.deadline || null,
+        creator: 1,
+      });
+
+      for (const task of projectData.tasks) {
+        await api.post("projects/tasks/", {
+          project: response.data.id,
+          title: task.title,
+          description: task.description || "",
+          assigned_to: task.assignee || null,
+          deadline: task.deadline || null,
+          status: "todo",
+        });
+      }
+
+      const projectsResponse = await api.get("projects/projects/");
+      setProjects(projectsResponse.data);
+
+      navigate("/");
+    } catch (error) {
+      console.error("Ошибка создания:", error);
+      alert("Не удалось создать проект");
+    }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/login");
+    navigate("/");
   };
 
   if (!user) return <div>Загрузка...</div>;
@@ -98,6 +100,16 @@ function App() {
             onCreate={handleCreateProject}
           />
         }
+      />
+
+      <Route
+        path="/projects/:id/edit"
+        element={<EditProjectPage user={user} onLogout={handleLogout} />}
+      />
+
+      <Route
+        path="/projects/:id/chat"
+        element={<ProjectChatPage user={user} onLogout={handleLogout} />}
       />
     </Routes>
   );
