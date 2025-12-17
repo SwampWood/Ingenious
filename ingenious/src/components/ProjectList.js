@@ -66,7 +66,12 @@ const ProjectList = ({ projects }) => {
                       Редактировать
                     </button>
                     <button className="option-btn">Участники</button>
-                    <button className="option-btn">Чат проекта</button>
+                    <button 
+                      className="option-btn" 
+                      onClick={() => navigate(`/projects/${project.id}/chat`)}
+                    >
+                      Чат проекта
+                    </button>
                   </div>
                 )}
               </div>

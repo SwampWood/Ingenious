@@ -4,6 +4,7 @@ import Header from "./components/Header";
 import ProjectList from "./components/ProjectList";
 import CreateProjectPage from "./pages/CreateProjectPage";
 import EditProjectPage from "./pages/EditProjectPage";
+import ProjectChatPage from './pages/ProjectChatPage';
 import api from "./api";
 import "./styles/global.css";
 import "./App.css";
@@ -15,6 +16,8 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
+    localStorage.setItem("token", "daa0f2a9528ad2ce054901ed9df4a90e84ece44c"); // ОБЯЗАТЕЛЬНО ПОМЕНЯТЬ
+
     const fetchProjects = async () => {
       try {
         const response = await api.get("projects/projects/");

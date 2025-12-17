@@ -12,7 +12,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        return ChatRoom.objects.filter(participants=user)
+        return ChatRoom.objects.all() # ОБЯЗАТЕЛЬНО ПОМЕНЯТЬ
     
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
