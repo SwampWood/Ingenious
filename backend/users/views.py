@@ -40,7 +40,7 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
 
     def get_permissions(self):
-        if self.action == 'create':
+        if self.action in ['register', 'login', 'create']:
             return [permissions.AllowAny()]
         return super().get_permissions()
 

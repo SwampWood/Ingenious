@@ -19,11 +19,11 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    console.log(!token)
-    if (!token && location.pathname !== '/login' && location.pathname !== '/register') {
-      navigate('/login');
-      return;
-    }
+    //console.log(!token)
+    //if (!token && location.pathname !== '/login' && location.pathname !== '/register') {
+    //  navigate('/login');
+    //  return;
+    //}
 
     const fetchUserAndProjects = async () => {
     try {
