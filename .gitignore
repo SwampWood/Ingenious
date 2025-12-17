@@ -1,4 +1,10 @@
-frontend/node_modules/
+# JetBrains IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+
+.vscode/
 .idea/
 venv/
 .env
