@@ -3,8 +3,23 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from .serializers import UserSerializer, RegisterSerializer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+    user = request.user
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'avatar': user.avatar.url if user.avatar else None,
+        'bio': user.bio
+    })
 
 User = get_user_model()
 

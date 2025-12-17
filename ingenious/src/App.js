@@ -5,6 +5,7 @@ import ProjectList from "./components/ProjectList";
 import CreateProjectPage from "./pages/CreateProjectPage";
 import EditProjectPage from "./pages/EditProjectPage";
 import ProjectChatPage from './pages/ProjectChatPage';
+import LoginPage from './pages/LoginPage';
 import api from "./api";
 import "./styles/global.css";
 import "./App.css";
@@ -16,21 +17,32 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    localStorage.setItem("token", "daa0f2a9528ad2ce054901ed9df4a90e84ece44c"); // ОБЯЗАТЕЛЬНО ПОМЕНЯТЬ
+    const token = localStorage.getItem('token');
+    if (!token && location.pathname !== '/login') {
+      navigate('/login');
+      return;
+    }
 
-    const fetchProjects = async () => {
-      try {
-        const response = await api.get("projects/projects/");
-        setProjects(response.data);
-      } catch (error) {
-        console.error("Ошибка загрузки:", error);
-        setProjects([]);
+    const fetchUserAndProjects = async () => {
+    try {
+      const userResponse = await api.get('users/me/');
+      setUser(userResponse.data);
+
+      const projectsResponse = await api.get('projects/projects/');
+      setProjects(projectsResponse.data);
+    } catch (error) {
+      console.error('Ошибка загрузки:', error);
+      if (error.response?.status === 401) {
+        navigate('/login');
       }
-    };
+    }
+  };
 
-    setUser({ username: "Иван Иванов" });
-    fetchProjects();
-  }, [location.key]);
+    if (token) {
+      fetchUserAndProjects();
+      setUser({ username: 'Пользователь' });
+    }
+  }, [location.pathname, navigate]);
 
   const handleCreateProject = async (projectData) => {
     try {
@@ -114,6 +126,8 @@ function App() {
         path="/projects/:id/chat"
         element={<ProjectChatPage user={user} onLogout={handleLogout} />}
       />
+
+      <Route path="/login" element={<LoginPage />} />
     </Routes>
   );
 }
