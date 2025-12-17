@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import ProjectList from "./components/ProjectList";
-import CreateProjectModal from "./components/CreateProjectModal";
+import CreateProjectPage from "./pages/CreateProjectPage";
 import "./styles/global.css";
 import "./App.css";
 
 function App() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const mockUser = { username: "Иван Иванов" };
@@ -58,35 +59,47 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   if (!user) return <div>Загрузка...</div>;
 
   return (
-    <div className="App">
-      <Header username={user.username} onLogout={handleLogout} />
-      <main className="main-content">
-        <div className="section-header">
-          <h2>Создать проект</h2>
-          <button
-            className="create-project-btn"
-            onClick={() => setIsModalOpen(true)}
-          >
-            + Новый проект
-          </button>
-        </div>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <div className="App">
+            <Header username={user.username} onLogout={handleLogout} />
+            <main className="main-content">
+              <div className="section-header">
+                <h2>Создать проект</h2>
+                <button
+                  className="create-project-btn"
+                  onClick={() => navigate("/create")}
+                >
+                  + Новый проект
+                </button>
+              </div>
 
-        <h3>Мои проекты:</h3>
-        <ProjectList projects={projects} />
-      </main>
-
-      <CreateProjectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreateProject}
+              <h3>Мои проекты:</h3>
+              <ProjectList projects={projects} />
+            </main>
+          </div>
+        }
       />
-    </div>
+
+      <Route
+        path="/create"
+        element={
+          <CreateProjectPage
+            user={user}
+            onLogout={handleLogout}
+            onCreate={handleCreateProject}
+          />
+        }
+      />
+    </Routes>
   );
 }
 
