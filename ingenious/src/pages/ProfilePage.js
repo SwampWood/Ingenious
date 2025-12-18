@@ -43,6 +43,12 @@ const ProfilePage = ({ user, onLogout }) => {
 
   if (!profile) return <div>Загрузка...</div>;
 
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost${avatarPath}`;
+  };
+
   return (
     <div className="profile-page">
       <Header username={user.username} onLogout={onLogout} />
@@ -52,8 +58,9 @@ const ProfilePage = ({ user, onLogout }) => {
           <div className="avatar-section">
             {profile.avatar ? (
               <img 
-                src={profile.avatar ? `http://localhost:8000${profile.avatar}` : null} 
+                src={getAvatarUrl(profile.avatar)} 
                 alt="Аватар" 
+                onError={(e) => e.target.style.display = 'none'}
                 className="avatar"
               />
             ) : (
