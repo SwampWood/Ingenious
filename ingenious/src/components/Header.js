@@ -16,7 +16,9 @@ const Header = ({ username, onLogout }) => {
         <h0 className="logo">Ingenious</h0>
       </div>
       <div className="header-right">
-        <span className="username">{username}</span>
+        <span className="username" onClick={() => navigate('/profile')}>
+          {username}
+        </span>
         <button className="logout-btn" onClick={handleLogout}>
           Выйти
         </button>
