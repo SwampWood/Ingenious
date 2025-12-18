@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import ProjectList from "./components/ProjectList";
@@ -14,74 +14,174 @@ import "./App.css";
 function App() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const effectRan = useRef(false);
 
   useEffect(() => {
+  if (effectRan.current) return;
+  effectRan.current = true;
+
+  const checkAuth = async () => {
     const token = localStorage.getItem('token');
-    console.log(!token)
-    if (!token && location.pathname !== '/login' && location.pathname !== '/register') {
-      navigate('/login');
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+    
+    if (!token && !isAuthPage) {
+      navigate('/login', { replace: true });
+      setIsLoading(false);
       return;
     }
 
-    const fetchUserAndProjects = async () => {
-    try {
-      const userResponse = await api.get('users/me/');
-      setUser(userResponse.data);
+    if (token && isAuthPage) {
+      navigate('/', { replace: true });
+      setIsLoading(false);
+      return;
+    }
 
-      const projectsResponse = await api.get('projects/projects/');
-      setProjects(projectsResponse.data);
-    } catch (error) {
-      console.error('Ошибка загрузки:', error);
-      if (error.response?.status === 401) {
-        navigate('/login');
+    if (token && !isAuthPage) {
+      try {
+        const userResponse = await api.get('users/me/');
+        setUser(userResponse.data);
+
+        const projectsResponse = await api.get('projects/projects/');
+        setProjects(projectsResponse.data);
+      } catch (error) {
+        console.error('Ошибка загрузки:', error);
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          setUser(null);
+          navigate('/login', { replace: true });
+        }
+      } finally {
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
   };
 
-    if (token) {
-      fetchUserAndProjects();
-      setUser({ username: 'Пользователь' });
-    }
-  }, [location.pathname, navigate]);
+  checkAuth();
+}, [location.pathname]);
 
   const handleCreateProject = async (projectData) => {
-    try {
-      const response = await api.post("projects/projects/", {
-        title: projectData.title,
-        description: projectData.description,
-        deadline: projectData.deadline || null,
-        creator: 1,
-      });
+  try {
+    console.log('Создание проекта:', projectData.title);
+    
+    const response = await api.post("projects/projects/", {
+      title: projectData.title,
+      description: projectData.description,
+      deadline: projectData.deadline || null,
+    });
 
-      for (const task of projectData.tasks) {
+    const projectId = response.data.id;
+    console.log('Проект создан, ID:', projectId);
+
+    if (projectData.members && projectData.members.length > 0) {
+      console.log('Добавляем участников:', projectData.members);
+      for (const memberUsername of projectData.members) {
+        try {
+          await api.post(`projects/projects/${projectId}/add_member/`, {
+            username: memberUsername
+          });
+          console.log(`Участник ${memberUsername} добавлен`);
+        } catch (memberError) {
+          console.warn(`Не удалось добавить участника ${memberUsername}:`, memberError.response?.data);
+        }
+      }
+    }
+
+    console.log('Создаем задачи:', projectData.tasks.length);
+    for (const task of projectData.tasks) {
+      let assignedToId = null;
+      
+      if (task.assignee && task.assignee.trim()) {
+        try {
+          const usersResponse = await api.get(`users/users/?username=${task.assignee}`);
+          
+          if (usersResponse.data && usersResponse.data.length > 0) {
+            assignedToId = usersResponse.data[0].id;
+            console.log(`Задача "${task.title}" назначена на ${task.assignee} (ID: ${assignedToId})`);
+          } else {
+            console.warn(`Пользователь ${task.assignee} не найден для задачи "${task.title}"`);
+          }
+        } catch (userError) {
+          console.warn(`Ошибка поиска пользователя ${task.assignee}:`, userError);
+        }
+      }
+
+      try {
         await api.post("projects/tasks/", {
-          project: response.data.id,
+          project: projectId,
           title: task.title,
           description: task.description || "",
-          assigned_to: task.assignee || null,
+          assigned_to_id: assignedToId,
           deadline: task.deadline || null,
           status: "todo",
         });
+        console.log(`Задача "${task.title}" создана`);
+      } catch (taskError) {
+        console.error(`Ошибка создания задачи "${task.title}":`, taskError.response?.data);
       }
-
-      const projectsResponse = await api.get("projects/projects/");
-      setProjects(projectsResponse.data);
-
-      navigate("/");
-    } catch (error) {
-      console.error("Ошибка создания:", error);
-      alert("Не удалось создать проект");
     }
-  };
+
+    const projectsResponse = await api.get("projects/projects/");
+    setProjects(projectsResponse.data);
+
+    navigate("/");
+  } catch (error) {
+    console.error("Ошибка создания проекта:", error.response?.data || error);
+    
+    let errorMessage = "Не удалось создать проект";
+    
+    if (error.response?.data) {
+      if (error.response.data.title) {
+        errorMessage = `Ошибка в названии: ${error.response.data.title.join(', ')}`;
+      } else if (error.response.data.non_field_errors) {
+        errorMessage = error.response.data.non_field_errors.join(', ');
+      } else if (error.response.data.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (typeof error.response.data === 'string') {
+        errorMessage = error.response.data;
+      }
+    }
+    
+    alert(errorMessage);
+  }
+};
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/");
+    setUser(null);
+    setProjects([]);
+    navigate("/login", { replace: true });
   };
 
-  if (!user) return <div>Загрузка...</div>;
+  const handleLoginSuccess = async (userData) => {
+    setUser(userData);
+    
+    try {
+      const projectsResponse = await api.get('projects/projects/');
+      setProjects(projectsResponse.data);
+    } catch (error) {
+      console.error('Ошибка загрузки проектов:', error);
+    }
+    
+    navigate('/', { replace: true });
+  };
+
+  const handleRegisterSuccess = async (userData) => {
+    setUser(userData);
+    
+    try {
+      const projectsResponse = await api.get('projects/projects/');
+      setProjects(projectsResponse.data);
+    } catch (error) {
+      console.error('Ошибка загрузки проектов:', error);
+    }
+    
+    navigate('/', { replace: true });
+  };
 
   return (
     <Routes>
@@ -89,7 +189,7 @@ function App() {
         path="/"
         element={
           <div className="App">
-            <Header username={user.username} onLogout={handleLogout} />
+            <Header username={user?.username || 'Пользователь'} onLogout={handleLogout} />
             <main className="main-content">
               <div className="section-header">
                 <h2>Создать проект</h2>
@@ -129,9 +229,20 @@ function App() {
         element={<ProjectChatPage user={user} onLogout={handleLogout} />}
       />
 
-      <Route path="/login" element={<LoginPage />} />
+      <Route 
+        path="/login" 
+        element={<LoginPage onLoginSuccess={handleLoginSuccess} />}
+      />
+      
+      <Route 
+        path="/register" 
+        element={<RegisterPage onRegisterSuccess={handleRegisterSuccess} />}
+      />
 
-      <Route path="/register" element={<RegisterPage />} />
+      <Route 
+        path="*" 
+        element={<div>Страница не найдена</div>}
+      />
     </Routes>
   );
 }

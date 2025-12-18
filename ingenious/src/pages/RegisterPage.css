@@ -109,18 +109,18 @@
   background: var(--secondary);
 }
 
-.register-link {
+.login-link {
   text-align: center;
   font-size: var(--default);
   color: var(--text-secondary);
 }
 
-.register-text {
+.login-text {
   color: var(--primary);
   text-decoration: none;
   font-weight: 500;
 }
 
-.register-text:hover {
+.login-text:hover {
   text-decoration: underline;
 }
