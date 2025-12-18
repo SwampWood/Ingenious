@@ -37,7 +37,6 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
                 room = ChatRoom.objects.create(
                     room_type='project',
                     project=project,
-                    name=f'Чат проекта {project.title}'
                 )
 
                 room.participants.add(project.creator)

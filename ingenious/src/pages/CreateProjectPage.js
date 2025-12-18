@@ -42,6 +42,12 @@ const CreateProjectPage = ({ user, onLogout, onCreate }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!title.trim()) {
+    alert('Введите название проекта');
+    return;
+  }
+  
     const validTasks = tasks.filter((t) => t.title.trim());
 
     onCreate({

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import axios from "axios"
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import './LoginPage.css';
 
-const LoginPage = () => {
+const LoginPage = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
   const [credentials, setCredentials] = useState({
     username: '',
@@ -19,22 +20,29 @@ const LoginPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();
+  setError('');
+  
+  try {
+    const response = await axios.post('http://localhost:8000/api/token-auth/', {
+      username: credentials.username,
+      password: credentials.password
+    });
     
-    try {
-      const response = await api.post('token-auth/', {
-        username: credentials.username,
-        password: credentials.password
-      });
-      
-      localStorage.setItem('token', response.data.token);
+    localStorage.setItem('token', response.data.token);
+
+    const userResponse = await api.get('users/me/');
+
+    if (onLoginSuccess) {
+      onLoginSuccess(userResponse.data);
+    } else {
       navigate('/');
-    } catch (error) {
-      console.error('Ошибка входа:', error);
-      setError('Неверный логин или пароль');
     }
-  };
+  } catch (error) {
+    console.error('Ошибка входа:', error);
+    setError('Неверный логин или пароль');
+  }
+};
 
   return (
     <div className="login-page">

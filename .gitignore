@@ -5,6 +5,7 @@
 *.ipr
 
 .vscode/
+.history/
 .idea/
 venv/
 .env

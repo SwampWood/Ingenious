@@ -81,7 +81,7 @@ const EditProjectPage = ({ user, onLogout }) => {
       try {
         await api.delete(`projects/projects/${id}/`);
         alert("Проект удалён");
-        navigate("/");
+        window.location.href = "/";
       } catch (error) {
         console.error("Ошибка удаления:", error);
         alert("Не удалось удалить проект");

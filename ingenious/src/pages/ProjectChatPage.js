@@ -65,13 +65,11 @@ const ProjectChatPage = ({ user, onLogout }) => {
       console.log('Создаём новую комнату для проекта:', id);
 
       const projResponse = await api.get(`projects/projects/${id}/`);
-      const participants = projResponse.data.participants.map(p => p.id);
+      const participants = projResponse.data.members.map(p => p.id);
       
       const roomResponse = await api.post('chat/rooms/', {
         room_type: 'project',
-        project: id,
-        participants: participants,
-        name: `Чат проекта ${projResponse.data.title}`
+        project: id
       });
       
       roomId = roomResponse.data.id;
