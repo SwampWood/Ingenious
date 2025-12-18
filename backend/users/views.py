@@ -54,17 +54,16 @@ class UserViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(username__icontains=username)
         return queryset
 
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
-    def register(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({
-                'user': UserSerializer(user).data,
-                'token': token.key
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['get', 'patch'])
+    def profile(self, request):
+        if request.method == 'GET':
+            serializer = self.get_serializer(request.user)
+            return Response(serializer.data)
+        elif request.method == 'PATCH':
+            serializer = self.get_serializer(request.user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
