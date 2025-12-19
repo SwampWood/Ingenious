@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import api from "../api";
@@ -11,6 +11,43 @@ const ProjectChatPage = ({ user, onLogout }) => {
   const [newMessage, setNewMessage] = useState("");
   const [project, setProject] = useState(null);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const prevMessagesLengthRef = useRef(0);
+
+  const checkIfNearBottom = () => {
+    if (!messagesContainerRef.current) return true;
+    
+    const container = messagesContainerRef.current;
+    const threshold = 100;
+    
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
+
+  const scrollToBottomIfNeeded = useCallback((force = false) => {
+    if (!messagesContainerRef.current) return;
+    
+    const shouldScroll = force || isNearBottom;
+    
+    if (shouldScroll) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [isNearBottom]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsNearBottom(checkIfNearBottom());
+    };
+
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,13 +72,17 @@ const ProjectChatPage = ({ user, onLogout }) => {
     return () => clearInterval(interval);
   }, [id]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length > prevMessagesLengthRef.current) {
+      const isMyNewMessage = messages.length > 0 && 
+                            messages[messages.length - 1].author.username === user.username;
+      if (isMyNewMessage || isNearBottom) {
+        scrollToBottomIfNeeded(true);
+      }
+    }
+    
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages, user.username, isNearBottom, scrollToBottomIfNeeded]);
 
   const getAvatarUrl = (avatarPath) => {
     if (!avatarPath) return null;
@@ -50,6 +91,7 @@ const ProjectChatPage = ({ user, onLogout }) => {
   };
 
   const renderMessages = () => {
+
     if (messages.length === 0) {
       return <div className="no-messages">Нет сообщений. Будьте первым!</div>;
     }
@@ -78,13 +120,24 @@ const ProjectChatPage = ({ user, onLogout }) => {
     });
   }
 
+  const openUserProfile = (userId) => {
+    navigate(`/profile/${userId}`, { 
+      state: { from: `/projects/${id}/chat` } 
+    });
+  };
+
   return groupedMessages.map((msg) => (
     <div
       key={msg.id}
       className={`message ${msg.isOwnMessage ? "own" : "other"} ${msg.hasNextFromSameUser ? "same-user-next" : ""} ${msg.hasPrevFromSameUser ? "same-user-prev" : ""}`}
     >
       {msg.showAvatar && !msg.isOwnMessage && (
-        <div className="message-avatar">
+        <div
+          className="message-avatar"
+          onClick={() => openUserProfile(msg.author.id)}
+          style={{ cursor: 'pointer' }}
+          title={`Профиль ${msg.author.username}`}
+        >
           {msg.author.avatar ? (
             <img 
               src={getAvatarUrl(msg.author.avatar)} 

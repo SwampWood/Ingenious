@@ -69,7 +69,7 @@ const EditProjectPage = ({ user, onLogout }) => {
       }
 
       alert("Проект обновлён!");
-      navigate("/");
+      window.location.href = "/";
     } catch (error) {
       console.error("Ошибка обновления:", error);
       alert("Не удалось обновить проект");

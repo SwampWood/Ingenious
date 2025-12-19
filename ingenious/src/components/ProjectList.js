@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./ProjectList.css";
 
 const ProjectList = ({ projects }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [expandedProject, setExpandedProject] = useState(null);
   const [showOptions, setShowOptions] = useState(null);
   const [showInfo, setShowInfo] = useState(null);
@@ -30,6 +31,52 @@ const ProjectList = ({ projects }) => {
   const toggleOptions = (id, e) => {
     e.stopPropagation();
     setShowOptions(showOptions === id ? null : id);
+  };
+
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:8000${avatarPath}`;
+  };
+
+  const renderMemberAvatar = (member, size = 'small') => {
+    const avatarClass = size === 'large' ? 'member-avatar-large' : 'member-avatar-small';
+    const fallbackClass = size === 'large' ? 'avatar-fallback-large' : 'avatar-fallback-small';
+    
+    const handleClick = (e) => {
+      e.stopPropagation();
+      navigate(`/profile/${member.user.id}`, {
+        state: { from: location.pathname }
+      });
+    };
+
+    return (
+      <div 
+        key={member.id}
+        className={`member-avatar ${avatarClass}`}
+        onClick={handleClick}
+        title={member.user.username}
+      >
+        {member.user.avatar ? (
+          <img 
+            src={getAvatarUrl(member.user.avatar)} 
+            alt={member.user.username}
+            className="avatar-img"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const fallback = document.createElement('div');
+              fallback.className = fallbackClass;
+              fallback.textContent = member.user.username[0].toUpperCase();
+              e.target.parentElement.appendChild(fallback);
+            }}
+          />
+        ) : (
+          <div className={fallbackClass}>
+            {member.user.username[0].toUpperCase()}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -60,12 +107,12 @@ const ProjectList = ({ projects }) => {
 
                 {showOptions === project.id && (
                   <div className="more-options" ref={menuRef}>
-                  <button className="option-btn" onClick={() => {
-                    setShowInfo(project.id);
-                    setShowOptions(null);
-                  }}>
-                    Информация
-                  </button>
+                    <button className="option-btn" onClick={() => {
+                      setShowInfo(project.id);
+                      setShowOptions(null);
+                    }}>
+                      Информация
+                    </button>
                     <button
                       className="option-btn"
                       onClick={() => navigate(`/projects/${project.id}/edit`)}
@@ -75,17 +122,6 @@ const ProjectList = ({ projects }) => {
                     <button className="option-btn" onClick={() => setShowMembers(project.id)}>
                       Участники
                     </button>
-
-                    {showMembers === project.id && (
-                      <div className="members-modal">
-                        <h3>Участники проекта</h3>
-                        {project.members?.map(member => (
-                          <div key={member.id}>
-                            {member.user.username} - {member.role}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     <button 
                       className="option-btn" 
                       onClick={() => navigate(`/projects/${project.id}/chat`)}
@@ -177,23 +213,48 @@ const ProjectList = ({ projects }) => {
               <button className="close-btn" onClick={() => setShowMembers(null)}>×</button>
             </div>
             
-            {projects.find(p => p.id === showMembers)?.members?.length > 0 ? (
-              <div className="members-list">
-                {projects.find(p => p.id === showMembers).members.map(member => (
-                  <div key={member.id} className="member-item">
-                    <div className="member-avatar">
-                      {member.user.username.charAt(0).toUpperCase()}
+            {projects.find(p => p.id === showMembers).members.map(member => (
+              <div 
+                key={member.id} 
+                className="member-item"
+                onClick={() => {
+                  setShowMembers(null);
+                  navigate(`/profile/${member.user.id}`, {
+                    state: { from: location.pathname }
+                  });
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="member-avatar-large-container">
+                  {member.user.avatar ? (
+                    <img 
+                      src={getAvatarUrl(member.user.avatar)} 
+                      alt={member.user.username}
+                      className="avatar-img-large"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const fallback = document.createElement('div');
+                        fallback.className = 'avatar-fallback-large';
+                        fallback.textContent = member.user.username[0].toUpperCase();
+                        e.target.parentElement.appendChild(fallback);
+                      }}
+                    />
+                  ) : (
+                    <div className="avatar-fallback-large">
+                      {member.user.username[0].toUpperCase()}
                     </div>
-                    <div className="member-info">
-                      <div className="member-name">{member.user.username}</div>
-                      <div className="member-role">{member.role === 'creator' ? 'Создатель' : 'Участник'}</div>
-                    </div>
+                  )}
+                </div>
+                
+                <div className="member-info">
+                  <div className="member-name">{member.user.username}</div>
+                  <div className="member-role">
+                    {member.role === 'creator' ? 'Создатель' : 'Участник'}
                   </div>
-                ))}
+                  <div className="view-profile-hint">Нажмите для просмотра профиля →</div>
+                </div>
               </div>
-            ) : (
-              <p className="no-members">У проекта пока нет участников</p>
-            )}
+            ))}
           </div>
         </div>
       )}

@@ -12,9 +12,11 @@
   margin: 0 auto;
   width: 100%;
   padding: 1rem;
+  overflow: hidden;
 }
 
 .chat-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -30,6 +32,7 @@
 
 .messages-container {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 1rem;
   background: #f8fafc;
@@ -182,7 +185,6 @@
 
 .message-text {
   font-size: 14px;
-  border: 1px solid red;
   line-height: 1.4;
   margin-bottom: 2px;
   overflow-wrap: break-word;
@@ -211,6 +213,7 @@
 .message-form {
   display: flex;
   align-items: flex-end;
+  flex-shrink: 0;
   gap: 0.5rem;
   padding: 1rem 0;
 }
