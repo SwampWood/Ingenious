@@ -39,46 +39,6 @@ const ProjectList = ({ projects }) => {
     return `http://localhost:8000${avatarPath}`;
   };
 
-  const renderMemberAvatar = (member, size = 'small') => {
-    const avatarClass = size === 'large' ? 'member-avatar-large' : 'member-avatar-small';
-    const fallbackClass = size === 'large' ? 'avatar-fallback-large' : 'avatar-fallback-small';
-    
-    const handleClick = (e) => {
-      e.stopPropagation();
-      navigate(`/profile/${member.user.id}`, {
-        state: { from: location.pathname }
-      });
-    };
-
-    return (
-      <div 
-        key={member.id}
-        className={`member-avatar ${avatarClass}`}
-        onClick={handleClick}
-        title={member.user.username}
-      >
-        {member.user.avatar ? (
-          <img 
-            src={getAvatarUrl(member.user.avatar)} 
-            alt={member.user.username}
-            className="avatar-img"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const fallback = document.createElement('div');
-              fallback.className = fallbackClass;
-              fallback.textContent = member.user.username[0].toUpperCase();
-              e.target.parentElement.appendChild(fallback);
-            }}
-          />
-        ) : (
-          <div className={fallbackClass}>
-            {member.user.username[0].toUpperCase()}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="project-list">
       {projects.map((project) => (

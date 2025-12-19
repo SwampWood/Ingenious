@@ -1,0 +1,77 @@
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+
+.select-header {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.2s;
+}
+
+.select-header:hover {
+  border-color: #bbb;
+}
+
+.selected-value {
+  color: #333;
+}
+
+.arrow {
+  transition: transform 0.3s ease;
+  font-size: 12px;
+  color: #666;
+}
+
+.arrow.open {
+  transform: rotate(180deg);
+}
+
+.select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 1000;
+  margin-top: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  animation: dropdownAppear 0.2s ease;
+}
+
+@keyframes dropdownAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.select-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.select-option:hover {
+  background: #f5f7fa;
+}
+
+.select-option.selected {
+  background: #edf2f7;
+  color: #4a6fa5;
+  font-weight: 500;
+}
