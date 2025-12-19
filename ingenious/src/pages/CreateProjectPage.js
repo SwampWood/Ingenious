@@ -44,9 +44,9 @@ const CreateProjectPage = ({ user, onLogout, onCreate }) => {
     e.preventDefault();
 
     if (!title.trim()) {
-    alert('Введите название проекта');
-    return;
-  }
+      alert('Введите название проекта');
+      return;
+    }
   
     const validTasks = tasks.filter((t) => t.title.trim());
 
@@ -60,7 +60,7 @@ const CreateProjectPage = ({ user, onLogout, onCreate }) => {
         .filter((m) => m),
       deadline: projectDeadline,
     });
-    navigate("/");
+    window.location.href = "/";
   };
 
   return (

@@ -8,6 +8,7 @@ import ProjectChatPage from './pages/ProjectChatPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import UserProfilePage from './pages/UserProfilePage';
 import api from "./api";
 import "./styles/global.css";
 import "./App.css";
@@ -251,6 +252,11 @@ function App() {
       <Route 
         path="/profile" 
         element={<ProfilePage user={user} onLogout={handleLogout} />}
+      />
+
+      <Route 
+        path="/profile/:userId" 
+        element={<UserProfilePage user={user} onLogout={handleLogout} />} 
       />
 
       <Route 
