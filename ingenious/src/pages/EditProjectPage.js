@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Header from "../components/Header";
+import UserAutocomplete from '../components/UserAutocomplete';
 import CustomSelect from '../components/CustomSelect';
 import api from "../api";
 import "./EditProjectPage.css";
@@ -15,7 +16,7 @@ const EditProjectPage = ({ user, onLogout }) => {
     description: "",
     deadline: "",
   });
-  const [members, setMembers] = useState([]);
+  const [selectedMembers, setSelectedMembers] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
   const [taskFormData, setTaskFormData] = useState({
     title: "",
@@ -24,6 +25,7 @@ const EditProjectPage = ({ user, onLogout }) => {
     status: "todo",
     assigned_to: null,
   });
+  const [managingMembers, setManagingMembers] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -37,10 +39,14 @@ const EditProjectPage = ({ user, onLogout }) => {
             ? response.data.deadline.slice(0, 10)
             : "",
         });
-        const memberUsernames = response.data.members.map(
-          (m) => m.user.username,
-        );
-        setMembers(memberUsernames);
+
+        const memberObjects = response.data.members.map(m => ({
+          id: m.user.id,
+          username: m.user.username,
+          email: m.user.email,
+          avatar: m.user.avatar
+        }));
+        setSelectedMembers(memberObjects);
       } catch (error) {
         console.error("Ошибка загрузки проекта:", error);
         alert("Не удалось загрузить проект");
@@ -168,13 +174,47 @@ const EditProjectPage = ({ user, onLogout }) => {
     }
   };
 
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:8000${avatarPath}`;
+  };
+
+  const addMember = async (user) => {
+    try {
+      await api.post(`projects/projects/${id}/add_member/`, {
+        username: user.username
+      });
+
+      setSelectedMembers(prev => [...prev, user]);
+
+      const response = await api.get(`projects/projects/${id}/`);
+      setProject(response.data);
+      
+    } catch (error) {
+      console.error('Ошибка добавления участника:', error);
+      alert('Не удалось добавить участника');
+    }
+  };
+
+  const removeMember = async (userId) => {
+    if (!window.confirm('Удалить участника из проекта?')) return;
+    
+    try {
+      await api.delete(`projects/projects/${id}/remove_member/${userId}/`);
+
+      setSelectedMembers(prev => prev.filter(member => member.id !== userId));
+
+      const response = await api.get(`projects/projects/${id}/`);
+      setProject(response.data);
+    } catch (error) {
+      console.error('Ошибка удаления участника:', error);
+      alert('Не удалось удалить участника');
+    }
+  };
+
   if (loading) return <div>Загрузка...</div>;
   if (!project) return <div>Проект не найден</div>;
-
-  const getMemberIdByUsername = (username) => {
-    const member = project.members.find((m) => m.user.username === username);
-    return member ? member.user.id : null;
-  };
 
   const statusOptions = [
     { value: 'todo', label: 'К выполнению' },
@@ -184,10 +224,10 @@ const EditProjectPage = ({ user, onLogout }) => {
 
   const assigneeOptions = [
     { value: '', label: 'Не назначена' },
-    ...(project.members?.map(member => ({
-      value: member.user.id,
-      label: member.user.username
-    })) || [])
+    ...selectedMembers.map(member => ({
+      value: member.id,
+      label: member.username
+    }))
   ];
 
   return (
@@ -225,6 +265,14 @@ const EditProjectPage = ({ user, onLogout }) => {
               rows="4"
             />
           </div>
+
+          <button 
+            type="button" 
+            className="option-btn" 
+            onClick={() => setManagingMembers(true)}
+          >
+            Управление участниками
+          </button>
 
           <div className="form-group">
             <label>Дедлайн</label>
@@ -295,6 +343,96 @@ const EditProjectPage = ({ user, onLogout }) => {
             </button>
           </div>
         </form>
+
+        {managingMembers && (
+          <div className="modal-overlay" onClick={() => setManagingMembers(false)}>
+            <div className="modal-content members-manage-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Управление участниками проекта</h3>
+                <button className="close-btn" onClick={() => setManagingMembers(false)}>×</button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="add-member-section">
+                  <h4>Добавить участника</h4>
+                  <UserAutocomplete
+                    selectedUsers={selectedMembers}
+                    onUsersChange={(newUsers) => {
+                      // Находим нового пользователя
+                      const newUser = newUsers.find(user => 
+                        !selectedMembers.some(m => m.id === user.id)
+                      );
+                      if (newUser) {
+                        addMember(newUser);
+                      }
+                    }}
+                    placeholder="Поиск пользователей для добавления..."
+                    excludeCurrentUser={true}
+                    currentUserId={user?.id}
+                  />
+                </div>
+
+                <div className="current-members-section">
+                  <h4>Текущие участники ({selectedMembers.length})</h4>
+                  <div className="members-list">
+                    {selectedMembers.map(member => {
+                      const memberInfo = project.members?.find(m => m.user.id === member.id);
+                      const isCreator = memberInfo?.role === 'creator';
+                      
+                      return (
+                        <div key={member.id} className="member-item-manage">
+                          <div className="member-info-manage">
+                            <div className="member-avatar-small">
+                              {member.avatar ? (
+                                <img 
+                                  src={getAvatarUrl(member.avatar)} 
+                                  alt={member.username}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    const fallback = e.target.nextElementSibling;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                      fallback.textContent = member.username[0].toUpperCase();
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <div className="avatar-fallback-small">
+                                  {member.username[0].toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="member-details">
+                              <div className="member-name">{member.username}</div>
+                              <div className="member-role">
+                                {isCreator ? 'Создатель' : 'Участник'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {!isCreator && (
+                            <button 
+                              className="remove-btn"
+                              onClick={() => removeMember(member.id)}
+                            >
+                              Удалить
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={() => setManagingMembers(false)}>
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {editingTask && (
           <div className="modal-overlay" onClick={() => setEditingTask(null)}>

@@ -61,6 +61,31 @@ def get_project_members(request, project_id):
     
     return Response(members_data)
 
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def remove_project_member(request, project_id, user_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    if not (project.creator == request.user):
+        return Response({'error': 'Только создатель может удалять участников'}, 
+                       status=status.HTTP_403_FORBIDDEN)
+
+    if project.creator_id == user_id:
+        return Response({'error': 'Нельзя удалить создателя проекта'}, 
+                       status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        membership = ProjectMembership.objects.get(
+            project=project,
+            user_id=user_id
+        )
+        membership.delete()
+        return Response({'message': 'Участник удален'})
+    except ProjectMembership.DoesNotExist:
+        return Response({'error': 'Участник не найден в проекте'}, 
+                       status=status.HTTP_404_NOT_FOUND)
+
+
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
