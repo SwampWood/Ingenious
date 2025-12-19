@@ -36,7 +36,7 @@ const ProjectList = ({ projects }) => {
   const getAvatarUrl = (avatarPath) => {
     if (!avatarPath) return null;
     if (avatarPath.startsWith('http')) return avatarPath;
-    return `http://localhost:8000${avatarPath}`;
+    return `http://localhost${avatarPath}`;
   };
 
   const renderMemberAvatar = (member, size = 'small') => {
