@@ -42,8 +42,6 @@ const UserProfilePage = ({ user, onLogout }) => {
   if (loading) return <div className="loading">Загрузка...</div>;
   if (!profileUser) return <div>Пользователь не найден</div>;
 
-  const isOwnProfile = user.id === parseInt(userId);
-
   return (
     <div className="user-profile-page">
       <Header username={user.username} onLogout={onLogout} />

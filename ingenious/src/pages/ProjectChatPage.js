@@ -200,8 +200,6 @@ const ProjectChatPage = ({ user, onLogout }) => {
       } else {
         console.log('Создаём новую комнату для проекта:', id);
 
-        const projResponse = await api.get(`projects/projects/${id}/`);
-        
         const roomResponse = await api.post('chat/rooms/', {
           room_type: 'project',
           project: id

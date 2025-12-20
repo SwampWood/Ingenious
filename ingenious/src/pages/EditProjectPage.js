@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Header from "../components/Header";
+import UserAutocomplete from '../components/UserAutocomplete';
+import CustomSelect from '../components/CustomSelect';
 import api from "../api";
 import "./EditProjectPage.css";
 
@@ -14,7 +16,16 @@ const EditProjectPage = ({ user, onLogout }) => {
     description: "",
     deadline: "",
   });
-  const [members, setMembers] = useState([]);
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [editingTask, setEditingTask] = useState(null);
+  const [taskFormData, setTaskFormData] = useState({
+    title: "",
+    description: "",
+    deadline: "",
+    status: "todo",
+    assigned_to: null,
+  });
+  const [managingMembers, setManagingMembers] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -28,10 +39,14 @@ const EditProjectPage = ({ user, onLogout }) => {
             ? response.data.deadline.slice(0, 10)
             : "",
         });
-        const memberUsernames = response.data.members.map(
-          (m) => m.user.username,
-        );
-        setMembers(memberUsernames);
+
+        const memberObjects = response.data.members.map(m => ({
+          id: m.user.id,
+          username: m.user.username,
+          email: m.user.email,
+          avatar: m.user.avatar
+        }));
+        setSelectedMembers(memberObjects);
       } catch (error) {
         console.error("Ошибка загрузки проекта:", error);
         alert("Не удалось загрузить проект");
@@ -65,6 +80,7 @@ const EditProjectPage = ({ user, onLogout }) => {
           description: task.description || "",
           status: task.status,
           deadline: task.deadline || null,
+          assigned_to: task.assigned_to?.id || null,
         });
       }
 
@@ -89,20 +105,6 @@ const EditProjectPage = ({ user, onLogout }) => {
     }
   };
 
-  const updateTaskStatus = async (taskId, newStatus) => {
-    try {
-      await api.patch(`projects/tasks/${taskId}/`, { status: newStatus });
-      setProject((prev) => ({
-        ...prev,
-        tasks: prev.tasks.map((task) =>
-          task.id === taskId ? { ...task, status: newStatus } : task,
-        ),
-      }));
-    } catch (error) {
-      console.error("Ошибка обновления задачи:", error);
-    }
-  };
-
   const deleteTask = async (taskId) => {
     if (!window.confirm("Удалить задачу?")) return;
     try {
@@ -122,65 +124,111 @@ const EditProjectPage = ({ user, onLogout }) => {
       title: "Новая задача",
       status: "todo",
       description: "",
+      assigned_to: null,
     };
     setProject((prev) => ({
       ...prev,
       tasks: [...prev.tasks, newTask],
     }));
+    openEditTaskModal(newTask);
   };
 
-  const updateTaskTitle = async (taskId, newTitle) => {
-    if (taskId.toString().startsWith("new-")) {
-      setProject((prev) => ({
-        ...prev,
-        tasks: prev.tasks.map((task) =>
-          task.id === taskId ? { ...task, title: newTitle } : task,
-        ),
-      }));
-    } else {
-      try {
-        await api.patch(`projects/tasks/${taskId}/`, { title: newTitle });
-        setProject((prev) => ({
-          ...prev,
-          tasks: prev.tasks.map((task) =>
-            task.id === taskId ? { ...task, title: newTitle } : task,
-          ),
-        }));
-      } catch (error) {
-        console.error("Ошибка обновления названия:", error);
+  const openEditTaskModal = (task) => {
+    setEditingTask(task);
+    setTaskFormData({
+      title: task.title,
+      description: task.description || "",
+      deadline: task.deadline ? task.deadline.slice(0, 10) : "",
+      status: task.status,
+      assigned_to: task.assigned_to?.id || null,
+    });
+  };
+
+  const saveTaskChanges = async () => {
+    if (!editingTask) return;
+
+    try {
+      const taskData = {
+        title: taskFormData.title,
+        description: taskFormData.description,
+        deadline: taskFormData.deadline || null,
+        status: taskFormData.status,
+        assigned_to: taskFormData.assigned_to,
+      };
+
+      if (editingTask.id.toString().startsWith("new-")) {
+        await api.post("projects/tasks/", {
+          project: id,
+          ...taskData,
+        });
+      } else {
+        await api.patch(`projects/tasks/${editingTask.id}/`, taskData);
       }
+
+      const response = await api.get(`projects/projects/${id}/`);
+      setProject(response.data);
+      setEditingTask(null);
+    } catch (error) {
+      console.error("Ошибка сохранения задачи:", error);
+      alert("Не удалось сохранить изменения");
     }
   };
 
-  const updateTaskAssignee = async (taskId, username) => {
-    const assignedUser = username ? { username } : null;
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:8000${avatarPath}`;
+  };
 
-    if (taskId.toString().startsWith("new-")) {
-      setProject((prev) => ({
-        ...prev,
-        tasks: prev.tasks.map((task) =>
-          task.id === taskId ? { ...task, assigned_to: assignedUser } : task,
-        ),
-      }));
-    } else {
-      try {
-        await api.patch(`projects/tasks/${taskId}/`, {
-          assigned_to: username || null,
-        });
-        setProject((prev) => ({
-          ...prev,
-          tasks: prev.tasks.map((task) =>
-            task.id === taskId ? { ...task, assigned_to: assignedUser } : task,
-          ),
-        }));
-      } catch (error) {
-        console.error("Ошибка обновления назначения:", error);
-      }
+  const addMember = async (user) => {
+    try {
+      await api.post(`projects/projects/${id}/add_member/`, {
+        username: user.username
+      });
+
+      setSelectedMembers(prev => [...prev, user]);
+
+      const response = await api.get(`projects/projects/${id}/`);
+      setProject(response.data);
+      
+    } catch (error) {
+      console.error('Ошибка добавления участника:', error);
+      alert('Не удалось добавить участника');
+    }
+  };
+
+  const removeMember = async (userId) => {
+    if (!window.confirm('Удалить участника из проекта?')) return;
+    
+    try {
+      await api.delete(`projects/projects/${id}/remove_member/${userId}/`);
+
+      setSelectedMembers(prev => prev.filter(member => member.id !== userId));
+
+      const response = await api.get(`projects/projects/${id}/`);
+      setProject(response.data);
+    } catch (error) {
+      console.error('Ошибка удаления участника:', error);
+      alert('Не удалось удалить участника');
     }
   };
 
   if (loading) return <div>Загрузка...</div>;
   if (!project) return <div>Проект не найден</div>;
+
+  const statusOptions = [
+    { value: 'todo', label: 'К выполнению' },
+    { value: 'in_progress', label: 'В процессе' },
+    { value: 'done', label: 'Выполнено' }
+  ];
+
+  const assigneeOptions = [
+    { value: '', label: 'Не назначена' },
+    ...selectedMembers.map(member => ({
+      value: member.id,
+      label: member.username
+    }))
+  ];
 
   return (
     <div className="edit-project-page">
@@ -218,6 +266,14 @@ const EditProjectPage = ({ user, onLogout }) => {
             />
           </div>
 
+          <button 
+            type="button" 
+            className="option-btn" 
+            onClick={() => setManagingMembers(true)}
+          >
+            Управление участниками
+          </button>
+
           <div className="form-group">
             <label>Дедлайн</label>
             <input
@@ -232,30 +288,18 @@ const EditProjectPage = ({ user, onLogout }) => {
             <h3>Задачи проекта</h3>
 
             {project.tasks.map((task) => (
-              <div key={task.id} className="task-row">
+              <div
+                key={task.id}
+                className="task-row"
+                onClick={() => openEditTaskModal(task)}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="task-main">
                   <div className="task-header-row">
-                    <input
-                      type="text"
-                      value={task.title}
-                      onChange={(e) => updateTaskTitle(task.id, e.target.value)}
-                      className="task-title-input"
-                      placeholder="Название задачи"
-                    />
-                    <select
-                      value={task.assigned_to?.username || ""}
-                      onChange={(e) =>
-                        updateTaskAssignee(task.id, e.target.value)
-                      }
-                      className="task-assignee-select"
-                    >
-                      <option value="">Не назначена</option>
-                      {members.map((username) => (
-                        <option key={username} value={username}>
-                          {username}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="task-title">{task.title}</div>
+                    <div className="task-assignee">
+                      {task.assigned_to?.username || "Не назначена"}
+                    </div>
                   </div>
 
                   <div className="task-footer">
@@ -263,30 +307,24 @@ const EditProjectPage = ({ user, onLogout }) => {
                       {task.status === "done"
                         ? "✅ Выполнена"
                         : task.status === "in_progress"
-                          ? "🔄 В процессе"
-                          : "⏳ К выполнению"}
+                        ? "🔄 В процессе"
+                        : "⏳ К выполнению"}
                     </span>
+                    {task.deadline && (
+                      <span className="task-deadline">
+                        📅 {new Date(task.deadline).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="task-actions">
                   <button
                     type="button"
-                    className="status-btn"
-                    onClick={() => updateTaskStatus(task.id, "in_progress")}
-                  >
-                    В процессе
-                  </button>
-                  <button
-                    type="button"
-                    className="status-btn done"
-                    onClick={() => updateTaskStatus(task.id, "done")}
-                  >
-                    Выполнена
-                  </button>
-                  <button
-                    type="button"
                     className="delete-task-btn"
-                    onClick={() => deleteTask(task.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteTask(task.id);
+                    }}
                   >
                     Удалить
                   </button>
@@ -305,6 +343,195 @@ const EditProjectPage = ({ user, onLogout }) => {
             </button>
           </div>
         </form>
+
+        {managingMembers && (
+          <div className="modal-overlay" onClick={() => setManagingMembers(false)}>
+            <div className="modal-content members-manage-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Управление участниками проекта</h3>
+                <button className="close-btn" onClick={() => setManagingMembers(false)}>×</button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="add-member-section">
+                  <h4>Добавить участника</h4>
+                  <UserAutocomplete
+                    selectedUsers={selectedMembers}
+                    onUsersChange={(newUsers) => {
+                      // Находим нового пользователя
+                      const newUser = newUsers.find(user => 
+                        !selectedMembers.some(m => m.id === user.id)
+                      );
+                      if (newUser) {
+                        addMember(newUser);
+                      }
+                    }}
+                    placeholder="Поиск пользователей для добавления..."
+                    excludeCurrentUser={true}
+                    currentUserId={user?.id}
+                  />
+                </div>
+
+                <div className="current-members-section">
+                  <h4>Текущие участники ({selectedMembers.length})</h4>
+                  <div className="members-list">
+                    {selectedMembers.map(member => {
+                      const memberInfo = project.members?.find(m => m.user.id === member.id);
+                      const isCreator = memberInfo?.role === 'creator';
+                      
+                      return (
+                        <div key={member.id} className="member-item-manage">
+                          <div className="member-info-manage">
+                            <div className="member-avatar-small">
+                              {member.avatar ? (
+                                <img 
+                                  src={getAvatarUrl(member.avatar)} 
+                                  alt={member.username}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    const fallback = e.target.nextElementSibling;
+                                    if (fallback) {
+                                      fallback.style.display = 'flex';
+                                      fallback.textContent = member.username[0].toUpperCase();
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <div className="avatar-fallback-small">
+                                  {member.username[0].toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="member-details">
+                              <div className="member-name">{member.username}</div>
+                              <div className="member-role">
+                                {isCreator ? 'Создатель' : 'Участник'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {!isCreator && (
+                            <button 
+                              className="remove-btn"
+                              onClick={() => removeMember(member.id)}
+                            >
+                              Удалить
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={() => setManagingMembers(false)}>
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editingTask && (
+          <div className="modal-overlay" onClick={() => setEditingTask(null)}>
+            <div
+              className="modal-content task-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3>Редактировать задачу</h3>
+                <button
+                  className="close-btn"
+                  onClick={() => setEditingTask(null)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Название задачи</label>
+                  <input
+                    type="text"
+                    value={taskFormData.title}
+                    onChange={(e) =>
+                      setTaskFormData({ ...taskFormData, title: e.target.value })
+                    }
+                    placeholder="Название задачи"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Описание</label>
+                  <textarea
+                    value={taskFormData.description}
+                    onChange={(e) =>
+                      setTaskFormData({
+                        ...taskFormData,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="Описание задачи"
+                    rows="4"
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Дедлайн</label>
+                    <input
+                      type="date"
+                      value={taskFormData.deadline}
+                      onChange={(e) =>
+                        setTaskFormData({
+                          ...taskFormData,
+                          deadline: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Статус</label>
+                    <CustomSelect
+                      value={taskFormData.status}
+                      onChange={(value) => setTaskFormData({...taskFormData, status: value})}
+                      options={statusOptions}
+                      placeholder="Выберите статус"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Назначена на</label>
+                  <CustomSelect
+                    value={taskFormData.assigned_to || ''}
+                    onChange={(value) => setTaskFormData({
+                      ...taskFormData, 
+                      assigned_to: value || null
+                    })}
+                    options={assigneeOptions}
+                    placeholder="Выберите участника"
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  className="btn-secondary"
+                  onClick={() => setEditingTask(null)}
+                >
+                  Отмена
+                </button>
+                <button className="btn-primary" onClick={saveTaskChanges}>
+                  Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

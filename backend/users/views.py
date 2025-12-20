@@ -50,8 +50,11 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = User.objects.all()
         username = self.request.query_params.get('username')
+        search = self.request.query_params.get('search')
         if username:
-            queryset = queryset.filter(username__icontains=username)
+            queryset = queryset.filter(username__istartswith=username)
+        elif search:
+            queryset = queryset.filter(username__icontains=search)
         return queryset
 
     @action(detail=False, methods=['get', 'patch'])

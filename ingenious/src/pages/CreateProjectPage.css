@@ -89,6 +89,35 @@
   border-color: var(--primary);
 }
 
+.create-project-page .user-autocomplete {
+  margin-top: 0;
+}
+
+.create-project-page .autocomplete-input {
+  border: 1px solid #e2e8f0;
+  transition: border-color 0.2s;
+}
+
+.create-project-page .autocomplete-input:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.1);
+}
+
+.create-project-page .selected-users {
+  margin-top: 10px;
+}
+
+.create-project-page .selected-user-tag {
+  background: #e8f4fc;
+  border: 1px solid #c5d8f0;
+}
+
+.create-project-page .remove-user-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
+
 .task-form {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -161,5 +190,9 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+  
+  .create-project-page .form-section {
+    padding: 1.5rem;
   }
 }
