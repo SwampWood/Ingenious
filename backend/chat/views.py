@@ -5,6 +5,32 @@ from rest_framework.response import Response
 from django.db.models import Q
 from .models import ChatRoom, Message
 from .serializers import ChatRoomSerializer, MessageSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+def create_system_message(room, content):
+    try:
+        author = User.objects.get(username='system')
+    except User.DoesNotExist:
+        author = User.objects.create_user(
+            username='system',
+            email='system@example.com',
+            password=User.objects.make_random_password()
+        )
+        author.is_active = True
+        author.is_staff = False
+        author.is_superuser = False
+        author.save()
+    
+    message = Message.objects.create(
+        room=room,
+        author=author,
+        content=content
+    )
+    message.read_by.add(author)
+    return message
+
 
 class ChatRoomViewSet(viewsets.ModelViewSet):
     serializer_class = ChatRoomSerializer

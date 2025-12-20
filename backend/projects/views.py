@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from django.db.models import Q
 from .models import Project, Task, ProjectMembership
 from .serializers import ProjectSerializer, TaskSerializer, ProjectMembershipSerializer
+from chat.models import ChatRoom
+from chat.views import create_system_message
 
 
 
@@ -36,6 +38,7 @@ def add_project_member(request, project_id):
         project=project,
         role='participant'
     )
+    send_member_notification(project, user, 'joined', request.user)
     
     return Response({'message': f'User {username} added to project'})
 
@@ -75,16 +78,38 @@ def remove_project_member(request, project_id, user_id):
                        status=status.HTTP_400_BAD_REQUEST)
     
     try:
+        user = User.objects.get(id=user_id)
         membership = ProjectMembership.objects.get(
             project=project,
-            user_id=user_id
+            user=user
         )
         membership.delete()
+        send_member_notification(project, user, 'left', request.user)
+        
         return Response({'message': 'Участник удален'})
-    except ProjectMembership.DoesNotExist:
+    except (ProjectMembership.DoesNotExist, User.DoesNotExist):
         return Response({'error': 'Участник не найден в проекте'}, 
                        status=status.HTTP_404_NOT_FOUND)
 
+def send_member_notification(project, member_user, action, action_user):
+    try:
+        room = ChatRoom.objects.filter(
+            project=project,
+            room_type='project'
+        ).first()
+        
+        if room:
+            messages = {
+                'joined': f'👋 {member_user.username} присоединился к проекту',
+                'left': f'🚪 {member_user.username} покинул проект',
+                'invited': f'📨 {action_user.username} пригласил {member_user.username} в проект',
+                'removed': f'👢 {action_user.username} удалил {member_user.username} из проекта',
+            }
+            
+            if action in messages:
+                create_system_message(room, messages[action])
+    except Exception as e:
+        print(f"Ошибка отправки уведомления участника: {e}")
 
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -124,4 +149,99 @@ class TaskViewSet(viewsets.ModelViewSet):
         ).distinct()
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        task = serializer.save(created_by=self.request.user)
+        self.send_task_notification(task, 'created')
+    
+    def perform_update(self, serializer):
+        old_task = self.get_object()
+        new_task = serializer.save()
+
+        self.send_task_notification(new_task, 'updated', old_task)
+    
+    def perform_destroy(self, instance):
+        self.send_task_notification(instance, 'deleted')
+        instance.delete()
+    
+    def send_task_notification(self, task, action, old_task=None):
+        try:
+            from chat.models import ChatRoom
+            from chat.views import create_system_message
+            room = ChatRoom.objects.filter(
+                project=task.project,
+                room_type='project'
+            ).first()
+            
+            if not room:
+                from .models import Project
+                project = Project.objects.get(id=task.project.id)
+                room = ChatRoom.objects.create(
+                    room_type='project',
+                    project=project,
+                )
+                room.participants.add(project.creator)
+                for membership in project.projectmembership_set.all():
+                    room.participants.add(membership.user)
+            
+            messages = {
+                'created': f'📋 Создана новая задача: "{task.title}"',
+                'updated': self.get_task_update_message(task, old_task),
+                'deleted': f'🗑️ Удалена задача: "{task.title}"',
+                'status_changed': self.get_status_message(task, old_task),
+            }
+            
+            if action in messages and messages[action]:
+                create_system_message(room, messages[action])
+        except Exception as e:
+            print(f"Ошибка отправки уведомления: {e}")
+    
+    def get_task_update_message(self, new_task, old_task):
+        if not old_task:
+            return None
+            
+        changes = []
+        
+        if old_task.title != new_task.title:
+            changes.append(f'название: "{old_task.title}" → "{new_task.title}"')
+        
+        if old_task.assigned_to != new_task.assigned_to:
+            old_assignee = old_task.assigned_to.username if old_task.assigned_to else "никто"
+            new_assignee = new_task.assigned_to.username if new_task.assigned_to else "никто"
+            changes.append(f'исполнитель: {old_assignee} → {new_assignee}')
+        
+        if old_task.deadline != new_task.deadline:
+            old_date = old_task.deadline.strftime('%d.%m.%Y') if old_task.deadline else "нет"
+            new_date = new_task.deadline.strftime('%d.%m.%Y') if new_task.deadline else "нет"
+            changes.append(f'дедлайн: {old_date} → {new_date}')
+        
+        if old_task.status != new_task.status:
+            status_names = {
+                'todo': 'К выполнению',
+                'in_progress': 'В процессе',
+                'done': 'Выполнено'
+            }
+            old_status = status_names.get(old_task.status, old_task.status)
+            new_status = status_names.get(new_task.status, new_task.status)
+            changes.append(f'статус: {old_status} → {new_status}')
+        
+        if changes:
+            return f'📝 Задача "{new_task.title}" изменена: {", ".join(changes)}'
+        return None
+    
+    def get_status_message(self, task, old_task):
+        if old_task and old_task.status != task.status:
+            status_names = {
+                'todo': 'К выполнению',
+                'in_progress': 'В процессе',
+                'done': 'Выполнено'
+            }
+            old_status = status_names.get(old_task.status, old_task.status)
+            new_status = status_names.get(task.status, task.status)
+            
+            emoji = {
+                'todo': '⏳',
+                'in_progress': '🔄',
+                'done': '✅'
+            }.get(task.status, '📋')
+            
+            return f'{emoji} Задача "{task.title}" изменила статус: {old_status} → {new_status}'
+        return None
