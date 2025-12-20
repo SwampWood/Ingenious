@@ -118,10 +118,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description']
     
     def get_queryset(self):
-        user = self.request.user
-        return Project.objects.filter(
-            Q(creator=user) | Q(participants=user)
-        ).distinct()
+        queryset = Project.objects.all()
+
+        participant_id = self.request.query_params.get('participant')
+        if participant_id:
+            try:
+                participant_id = int(participant_id)
+                queryset = queryset.filter(participants__id=participant_id)
+            except (ValueError, TypeError):
+                pass
+        
+        return queryset
     
     def perform_create(self, serializer):
         project = serializer.save(creator=self.request.user)
