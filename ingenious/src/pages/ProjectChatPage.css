@@ -249,3 +249,29 @@
   align-self: flex-end;
   margin-bottom: 3px;
 }
+
+.system-message {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+  padding: 0 20px;
+}
+
+.system-message-content {
+  background: #f0f7ff;
+  border: 1px solid #d0e3ff;
+  border-radius: 20px;
+  padding: 8px 16px;
+  max-width: 70%;
+  text-align: center;
+  color: #2c5282;
+  font-size: 13px;
+  position: relative;
+}
+
+.system-message-time {
+  font-size: 10px;
+  color: #718096;
+  margin-top: 4px;
+  text-align: right;
+}

@@ -90,94 +90,98 @@ const ProjectChatPage = ({ user, onLogout }) => {
     return `http://localhost:8000${avatarPath}`;
   };
 
-  const renderMessages = () => {
-
-    if (messages.length === 0) {
-      return <div className="no-messages">Нет сообщений. Будьте первым!</div>;
-    }
-
-    const groupedMessages = [];
-    
-    for (let i = 0; i < messages.length; i++) {
-      const currentMsg = messages[i];
-      const prevMsg = i > 0 ? messages[i - 1] : null;
-      const nextMsg = i < messages.length - 1 ? messages[i + 1] : null;
-
-      const showAvatar = currentMsg.author.username !== user.username && 
-                  (!nextMsg || nextMsg.author.username !== currentMsg.author.username);
-      const showUsername = currentMsg.author.username !== user.username && 
-                  (!prevMsg || prevMsg.author.username !== currentMsg.author.username);
-      const hasNextFromSameUser = nextMsg && nextMsg.author.username === currentMsg.author.username;
-      const hasPrevFromSameUser = prevMsg && prevMsg.author.username === currentMsg.author.username;
-      
-      groupedMessages.push({
-      ...currentMsg,
-      showAvatar,
-      showUsername,
-      hasNextFromSameUser,
-      hasPrevFromSameUser,
-      isOwnMessage: currentMsg.author.username === user.username
-    });
-  }
-
   const openUserProfile = (userId) => {
     navigate(`/profile/${userId}`, { 
       state: { from: `/projects/${id}/chat` } 
     });
   };
 
-  return groupedMessages.map((msg) => (
-    <div
-      key={msg.id}
-      className={`message ${msg.isOwnMessage ? "own" : "other"} ${msg.hasNextFromSameUser ? "same-user-next" : ""} ${msg.hasPrevFromSameUser ? "same-user-prev" : ""}`}
-    >
-      {msg.showAvatar && !msg.isOwnMessage && (
+  const renderMessages = () => {
+    if (messages.length === 0) {
+      return <div className="no-messages">Нет сообщений. Будьте первым!</div>;
+    }
+
+    return messages.map((msg, index) => {
+      const prevMsg = index > 0 ? messages[index - 1] : null;
+      const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+
+      if (msg.author.username === 'system') {
+        return (
+          <div key={msg.id} className="system-message">
+            <div className="system-message-content">
+              {msg.content}
+              <div className="system-message-time">
+                {new Date(msg.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const isOwnMessage = msg.author.username === user.username;
+      const showAvatar = !isOwnMessage && 
+        (!nextMsg || nextMsg.author.username !== msg.author.username);
+      const showUsername = !isOwnMessage && 
+        (!prevMsg || prevMsg.author.username !== msg.author.username);
+      const hasNextFromSameUser = nextMsg && nextMsg.author.username === msg.author.username;
+      const hasPrevFromSameUser = prevMsg && prevMsg.author.username === msg.author.username;
+
+      return (
         <div
-          className="message-avatar"
-          onClick={() => openUserProfile(msg.author.id)}
-          style={{ cursor: 'pointer' }}
-          title={`Профиль ${msg.author.username}`}
+          key={msg.id}
+          className={`message ${isOwnMessage ? "own" : "other"} ${hasNextFromSameUser ? "same-user-next" : ""} ${hasPrevFromSameUser ? "same-user-prev" : ""}`}
         >
-          {msg.author.avatar ? (
-            <img 
-              src={getAvatarUrl(msg.author.avatar)} 
-              alt={msg.author.username}
-              className="avatar-img"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = `<div class="avatar-fallback">${msg.author.username[0]}</div>`;
-              }}
-            />
-          ) : (
-            <div className="avatar-fallback">
-              {msg.author.username[0]}
+          {showAvatar && !isOwnMessage && (
+            <div
+              className="message-avatar"
+              onClick={() => openUserProfile(msg.author.id)}
+              style={{ cursor: 'pointer' }}
+              title={`Профиль ${msg.author.username}`}
+            >
+              {msg.author.avatar ? (
+                <img 
+                  src={getAvatarUrl(msg.author.avatar)} 
+                  alt={msg.author.username}
+                  className="avatar-img"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `<div class="avatar-fallback">${msg.author.username[0]}</div>`;
+                  }}
+                />
+              ) : (
+                <div className="avatar-fallback">
+                  {msg.author.username[0]}
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
-      
-      {!msg.showAvatar && !msg.isOwnMessage && (
-        <div className="message-avatar-placeholder"></div>
-      )}
-      
-      <div className="message-content-wrapper">
-        {msg.showUsername && !msg.isOwnMessage && (
-          <div className="message-author-name">{msg.author.username}</div>
-        )}
-        
-        <div className="message-bubble">
-          <div className="message-text">{msg.content}</div>
-          <div className="message-time">
-            {new Date(msg.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+          
+          {!showAvatar && !isOwnMessage && (
+            <div className="message-avatar-placeholder"></div>
+          )}
+          
+          <div className="message-content-wrapper">
+            {showUsername && !isOwnMessage && (
+              <div className="message-author-name">{msg.author.username}</div>
+            )}
+            
+            <div className="message-bubble">
+              <div className="message-text">{msg.content}</div>
+              <div className="message-time">
+                {new Date(msg.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  ));
-};
+      );
+    });
+  };
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -247,7 +251,10 @@ const ProjectChatPage = ({ user, onLogout }) => {
           <h2>Чат проекта: {project.title}</h2>
         </div>
 
-        <div className="messages-container">
+        <div 
+          className="messages-container" 
+          ref={messagesContainerRef}
+        >
           {renderMessages()}
           <div ref={messagesEndRef} />
         </div>
