@@ -2,4 +2,4 @@
 
 [Ссылка на figma](https://www.figma.com/design/08dgq53hyCL9fSOX0wDQSr/Ingenious?node-id=52-109&m=dev&t=UCqhCGZ4ZqT4mF7e-1)
 
-[Ссылка на демонстрацию фронтенда](https://drive.google.com/file/d/1XtEB0tEpxHA2hsMQvcxrZp5JiuA900gw/view?usp=sharing)
+[Ссылка на демонстрацию фронтенда](https://drive.google.com/file/d/149XVeePNxhMPDWDx83xJwEEfkng0Ssg_/view?usp=sharing)
