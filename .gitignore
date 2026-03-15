@@ -1,4 +1,3 @@
-/backend
 # JetBrains IDE
 .idea/
 *.iws
@@ -6,3 +5,12 @@
 *.ipr
 
 .vscode/
+.history/
+.idea/
+venv/
+.env
+*.sqlite3
+__pycache__/
+*.pyc
+*.log
+media/

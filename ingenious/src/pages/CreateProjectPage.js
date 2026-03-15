@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
+import UserAutocomplete from "../components/UserAutocomplete";
 import "./CreateProjectPage.css";
 
 const CreateProjectPage = ({ user, onLogout, onCreate }) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [members, setMembers] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState([]);
   const [projectDeadline, setProjectDeadline] = useState("");
   const [tasks, setTasks] = useState([
     { id: 1, title: "", assignee: "", deadline: "", description: "" },
@@ -42,19 +43,22 @@ const CreateProjectPage = ({ user, onLogout, onCreate }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!title.trim()) {
+      alert('Введите название проекта');
+      return;
+    }
+
     const validTasks = tasks.filter((t) => t.title.trim());
+    const membersString = selectedMembers.map(m => m.username).join(', ');
 
     onCreate({
       title,
       description,
       tasks: validTasks,
-      members: members
-        .split(",")
-        .map((m) => m.trim())
-        .filter((m) => m),
+      members: membersString,
       deadline: projectDeadline,
     });
-    navigate("/");
   };
 
   return (
@@ -93,12 +97,13 @@ const CreateProjectPage = ({ user, onLogout, onCreate }) => {
             </div>
 
             <div className="form-group">
-              <label>Участники (логины через запятую)</label>
-              <input
-                type="text"
-                value={members}
-                onChange={(e) => setMembers(e.target.value)}
-                placeholder="username1, username2, username3"
+              <label>Участники</label>
+              <UserAutocomplete
+                selectedUsers={selectedMembers}
+                onUsersChange={setSelectedMembers}
+                placeholder="Начните вводить логин пользователя..."
+                excludeCurrentUser={true}
+                currentUserId={user?.id}
               />
             </div>
 

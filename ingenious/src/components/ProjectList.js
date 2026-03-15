@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./ProjectList.css";
 
 const ProjectList = ({ projects }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [expandedProject, setExpandedProject] = useState(null);
   const [showOptions, setShowOptions] = useState(null);
+  const [showInfo, setShowInfo] = useState(null);
+  const [showMembers, setShowMembers] = useState(null);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -28,31 +33,15 @@ const ProjectList = ({ projects }) => {
     setShowOptions(showOptions === id ? null : id);
   };
 
-  const projectData = [
-    {
-      id: 1,
-      title: "Проект1",
-      progress: 33,
-      tasks: [
-        { id: 1, title: "Название задачи", status: "completed" },
-        { id: 2, title: "Название задачи", status: "in-progress" },
-        { id: 3, title: "Название задачи", status: "in-progress" },
-      ],
-    },
-    {
-      id: 2,
-      title: "Проект2",
-      progress: 50,
-      tasks: [
-        { id: 1, title: "Название задачи", status: "completed" },
-        { id: 2, title: "Название задачи", status: "in-progress" },
-      ],
-    },
-  ];
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost${avatarPath}`;
+  };
 
   return (
     <div className="project-list">
-      {projectData.map((project) => (
+      {projects.map((project) => (
         <div key={project.id} className="project-card">
           <div className="project-header">
             <div className="project-title">{project.title}</div>
@@ -78,10 +67,27 @@ const ProjectList = ({ projects }) => {
 
                 {showOptions === project.id && (
                   <div className="more-options" ref={menuRef}>
-                    <button className="option-btn">Информация</button>
-                    <button className="option-btn">Редактировать</button>
-                    <button className="option-btn">Участники</button>
-                    <button className="option-btn">Чат проекта</button>
+                    <button className="option-btn" onClick={() => {
+                      setShowInfo(project.id);
+                      setShowOptions(null);
+                    }}>
+                      Информация
+                    </button>
+                    <button
+                      className="option-btn"
+                      onClick={() => navigate(`/projects/${project.id}/edit`)}
+                    >
+                      Редактировать
+                    </button>
+                    <button className="option-btn" onClick={() => setShowMembers(project.id)}>
+                      Участники
+                    </button>
+                    <button 
+                      className="option-btn" 
+                      onClick={() => navigate(`/projects/${project.id}/chat`)}
+                    >
+                      Чат проекта
+                    </button>
                   </div>
                 )}
               </div>
@@ -100,8 +106,14 @@ const ProjectList = ({ projects }) => {
               {project.tasks.map((task) => (
                 <div key={task.id} className="task-item">
                   <span>{task.title}</span>
-                  <div className={`status ${task.status}`}>
-                    {task.status === "completed" ? "Выполнена" : "В процессе"}
+                  <div
+                    className={`status ${task.status === "done" ? "completed" : "in-progress"}`}
+                  >
+                    {task.status === "done"
+                      ? "Выполнена"
+                      : task.status === "in_progress"
+                        ? "В процессе"
+                        : "К выполнению"}
                   </div>
                 </div>
               ))}
@@ -109,6 +121,103 @@ const ProjectList = ({ projects }) => {
           )}
         </div>
       ))}
+
+      {showInfo && (
+        <div className="modal-overlay" onClick={() => setShowInfo(null)}>
+          <div className="modal-content info-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Информация о проекте</h3>
+              <button className="close-btn" onClick={() => setShowInfo(null)}>×</button>
+            </div>
+            
+            {projects.find(p => p.id === showInfo) && (
+              <div className="modal-body">
+                <h4>{projects.find(p => p.id === showInfo).title}</h4>
+                <p>{projects.find(p => p.id === showInfo).description}</p>
+                
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span className="label">Статус:</span>
+                    <span className="value">
+                      {projects.find(p => p.id === showInfo).is_completed ? 'Завершён' : 'Активный'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="label">Прогресс:</span>
+                    <span className="value">{projects.find(p => p.id === showInfo).progress}%</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="label">Дедлайн:</span>
+                    <span className="value">
+                      {projects.find(p => p.id === showInfo).deadline 
+                        ? new Date(projects.find(p => p.id === showInfo).deadline).toLocaleDateString('ru-RU')
+                        : 'Не установлен'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="label">Задач:</span>
+                    <span className="value">{projects.find(p => p.id === showInfo).tasks?.length || 0}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showMembers && (
+        <div className="modal-overlay" onClick={() => setShowMembers(null)}>
+          <div className="modal-content members-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Участники проекта</h3>
+              <button className="close-btn" onClick={() => setShowMembers(null)}>×</button>
+            </div>
+            
+            {projects.find(p => p.id === showMembers).members.map(member => (
+              <div 
+                key={member.id} 
+                className="member-item"
+                onClick={() => {
+                  setShowMembers(null);
+                  navigate(`/profile/${member.user.id}`, {
+                    state: { from: location.pathname }
+                  });
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="member-avatar-large-container">
+                  {member.user.avatar ? (
+                    <img 
+                      src={getAvatarUrl(member.user.avatar)} 
+                      alt={member.user.username}
+                      className="avatar-img-large"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const fallback = document.createElement('div');
+                        fallback.className = 'avatar-fallback-large';
+                        fallback.textContent = member.user.username[0].toUpperCase();
+                        e.target.parentElement.appendChild(fallback);
+                      }}
+                    />
+                  ) : (
+                    <div className="avatar-fallback-large">
+                      {member.user.username[0].toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="member-info">
+                  <div className="member-name">{member.user.username}</div>
+                  <div className="member-role">
+                    {member.role === 'creator' ? 'Создатель' : 'Участник'}
+                  </div>
+                  <div className="view-profile-hint">Нажмите для просмотра профиля →</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
