@@ -1,0 +1,16 @@
+# JetBrains IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+
+.vscode/
+.history/
+.idea/
+venv/
+.env
+*.sqlite3
+__pycache__/
+*.pyc
+*.log
+media/
